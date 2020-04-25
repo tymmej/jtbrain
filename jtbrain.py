@@ -5,7 +5,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("file", help="brainfuck file with code")
 args = parser.parse_args()
 
-
 class BrainfuckInterpreter():
     BRAINFUCK_CHARSER = "><+-.,[]"
     BRAINFUCK_DEF_MEMORY = 8
@@ -17,7 +16,6 @@ class BrainfuckInterpreter():
     code = None
 
     def __init__(self, file):
-
         with open(file, "r") as f:
             self.code = f.read()
         self.strip_code()
@@ -108,15 +106,9 @@ class BrainfuckInterpreter():
                 self.memory[self.mem_ptr] = ord(sys.stdin.read(1))
                 self.code_ptr_inc()
             elif self.code[self.code_ptr] == '[':
-                if self.memory_is_zero():
-                    self.code_ptr_set(self.matching_close())
-                else:
-                    self.code_ptr_inc()
+                self.code_ptr_set(self.matching_close()) if self.memory_is_zero() else self.code_ptr_inc()
             elif self.code[self.code_ptr] == ']':
-                if not self.memory_is_zero():
-                    self.code_ptr_set(self.matching_open())
-                else:
-                    self.code_ptr_inc()
+                self.code_ptr_set(self.matching_open()) if not self.memory_is_zero() else self.code_ptr_inc()
             else:
                 self.code_ptr_inc()
             #wait = input()
