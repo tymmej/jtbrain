@@ -39,7 +39,7 @@ def matching_open(code_ptr):
 with open(args.file, "r") as f:
     code = f.read()
 
-#print(code)
+print(code)
 
 code = strip_code(code)
 
@@ -58,17 +58,16 @@ while True:
         mem_ptr -= 1
         code_ptr += 1
     elif code[code_ptr] == '+':
-        memory[mem_ptr] += 1
+        memory[mem_ptr] = (memory[mem_ptr] + 1) & 0xff
         code_ptr += 1
     elif code[code_ptr] == '-':
-        memory[mem_ptr] -= 1
+        memory[mem_ptr] = (memory[mem_ptr] - 1) & 0xff
         code_ptr += 1
     elif code[code_ptr] == '.':
-        #sys.stdout.write("(%02x) %c\n" % (memory[mem_ptr], chr(memory[mem_ptr])))
         sys.stdout.write("%c" % chr(memory[mem_ptr]))
         code_ptr += 1
     elif code[code_ptr] == ',':
-        memory[mem_ptr] = sys.stdin.read(1)
+        memory[mem_ptr] = ord(sys.stdin.read(1))
         code_ptr += 1
     elif code[code_ptr] == '[':
         if memory[mem_ptr] == 0:
