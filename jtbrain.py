@@ -11,6 +11,7 @@ class BrainfuckInterpreter():
     BRAINFUCK_DEF_MEMORY = 8
     running = True
     memory = [0 for _ in range(BRAINFUCK_DEF_MEMORY)]
+    loops = []
     code_ptr = 0
     mem_ptr = 0
     code = None
@@ -20,6 +21,7 @@ class BrainfuckInterpreter():
         with open(file, "r") as f:
             self.code = f.read()
         self.strip_code()
+        self.loops = [-1 for _ in self.code]
 
     def strip_code(self):
         self.code = [c for c in self.code if c in self.BRAINFUCK_CHARSER]
@@ -56,22 +58,30 @@ class BrainfuckInterpreter():
             self.memory_is_zero()
 
     def matching_close(self):
+        if self.loops[self.code_ptr] > 0:
+            return self.loops[self.code_ptr]
         depth = 0
+        start_code_ptr = self.code_ptr
         while True:
             self.code_ptr += 1
             if self.code[self.code_ptr] == ']':
                 if depth == 0:
+                    self.loops[start_code_ptr] = self.code_ptr
                     return self.code_ptr
                 depth -= 1
             if self.code[self.code_ptr] == '[':
                 depth += 1
 
     def matching_open(self):
+        if self.loops[self.code_ptr] > 0:
+            return self.loops[self.code_ptr]
         depth = 0
+        start_code_ptr = self.code_ptr
         while True:
             self.code_ptr -= 1
             if self.code[self.code_ptr] == '[':
                 if depth == 0:
+                    self.loops[start_code_ptr] = self.code_ptr
                     return self.code_ptr
                 depth -= 1
             if self.code[self.code_ptr] == ']':
