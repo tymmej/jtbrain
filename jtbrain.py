@@ -8,7 +8,9 @@ args = parser.parse_args()
 
 class BrainfuckInterpreter():
     BRAINFUCK_CHARSER = "><+-.,[]"
-    memory = [0 for _ in range(30000)]
+    BRAINFUCK_DEF_MEMORY = 8
+    running = True
+    memory = [0 for _ in range(BRAINFUCK_DEF_MEMORY)]
     code_ptr = 0
     mem_ptr = 0
     code = None
@@ -21,6 +23,37 @@ class BrainfuckInterpreter():
 
     def strip_code(self):
         self.code = [c for c in self.code if c in self.BRAINFUCK_CHARSER]
+
+    def code_ptr_set(self, value):
+        self.code_ptr = value
+    
+    def code_ptr_inc(self):
+        self.code_ptr += 1
+        try:
+            self.code[self.code_ptr]
+        except IndexError:
+            self.running = False
+
+    def memory_inc(self):
+        try:
+            self.memory[self.mem_ptr] = (self.memory[self.mem_ptr] + 1) & 0xff
+        except IndexError:
+            self.memory.append(0)
+            self.memory_inc()
+
+    def memory_dec(self):
+        try:
+            self.memory[self.mem_ptr] = (self.memory[self.mem_ptr] - 1) & 0xff
+        except IndexError:
+            self.memory.append(0)
+            self.memory_dec()
+    
+    def memory_is_zero(self):
+        try:
+            return self.memory[self.mem_ptr] == 0
+        except IndexError:
+            self.memory.append(0)
+            self.memory_is_zero()
 
     def matching_close(self):
         depth = 0
@@ -45,41 +78,37 @@ class BrainfuckInterpreter():
                 depth += 1
     
     def exec(self):
-        while True:
-            try:
-                self.code[self.code_ptr]
-            except:
-                break
+        while self.running:
             if self.code[self.code_ptr] == '>':
                 self.mem_ptr += 1
-                self.code_ptr += 1
+                self.code_ptr_inc()
             elif self.code[self.code_ptr] == '<':
                 self.mem_ptr -= 1
-                self.code_ptr += 1
+                self.code_ptr_inc()
             elif self.code[self.code_ptr] == '+':
-                self.memory[self.mem_ptr] = (self.memory[self.mem_ptr] + 1) & 0xff
-                self.code_ptr += 1
+                self.memory_inc()
+                self.code_ptr_inc()
             elif self.code[self.code_ptr] == '-':
-                self.memory[self.mem_ptr] = (self.memory[self.mem_ptr] - 1) & 0xff
-                self.code_ptr += 1
+                self.memory_dec()
+                self.code_ptr_inc()
             elif self.code[self.code_ptr] == '.':
                 sys.stdout.write("%c" % chr(self.memory[self.mem_ptr]))
-                self.code_ptr += 1
+                self.code_ptr_inc()
             elif self.code[self.code_ptr] == ',':
                 self.memory[self.mem_ptr] = ord(sys.stdin.read(1))
-                self.code_ptr += 1
+                self.code_ptr_inc()
             elif self.code[self.code_ptr] == '[':
-                if self.memory[self.mem_ptr] == 0:
-                    self.code_ptr = self.matching_close()
+                if self.memory_is_zero():
+                    self.code_ptr_set(self.matching_close())
                 else:
-                    self.code_ptr += 1
+                    self.code_ptr_inc()
             elif self.code[self.code_ptr] == ']':
-                if self.memory[self.mem_ptr] != 0:
-                    self.code_ptr =self.matching_open()
+                if not self.memory_is_zero():
+                    self.code_ptr_set(self.matching_open())
                 else:
-                    self.code_ptr += 1
+                    self.code_ptr_inc()
             else:
-                self.code_ptr += 1
+                self.code_ptr_inc()
             #wait = input()
 
 bf = BrainfuckInterpreter(args.file)
