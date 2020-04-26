@@ -278,7 +278,7 @@ class BrainfuckInterpreter():
             else: #Extensions/OPTIMIZATIONs
                 try:
                     self.func[self.code[self.code_ptr] & 0xf0]()
-                except:
+                except KeyError:
                     self.code_ptr_inc()
 
 if __name__ == "__main__":
