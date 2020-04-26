@@ -5,13 +5,22 @@ class BrainfuckInterpreterOptimization():
     OPTIMIZATION_ZERO = 0x1 << 1
     OPTIMIZATION_ARITHMETICS = 0x1 << 2
     OPTIMIZATION_NOPS = 0x1 << 3
-
+    OPTIMIZATION_MOVES = 0x1 << 4
 
 class BrainfuckOptimizer():
     pass
 
 class BrainfuckInterpreter():
-    BRAINFUCK_CHARSET = "><+-.,[]"
+    BRAINFUCK_CHARSET = {
+        ">": 0x1,
+        "<": 0x2,
+        "+": 0x3,
+        "-": 0x4,
+        ".": 0x5,
+        ",": 0x6,
+        "[": 0x7,
+        "]": 0x8,
+    }
     BRAINFUCK_DEF_MEMORY = 8
     running = True
     memory = None
@@ -30,6 +39,7 @@ class BrainfuckInterpreter():
         else:
             self.input_data = sys.stdin
         self.strip_code()
+        self.translate_code()
         self.loops = [-1 for _ in self.code]
         self.memory = [0 for _ in range(ram if ram else self.BRAINFUCK_DEF_MEMORY)]
         self.optimization = optimization
@@ -42,6 +52,9 @@ class BrainfuckInterpreter():
         if self.optimization & BrainfuckInterpreterOptimization.OPTIMIZATION_ZERO:
             optimization_text.append("ZERO")
             self.optimize_zero()
+        if self.optimization & BrainfuckInterpreterOptimization.OPTIMIZATION_MOVES:
+            optimization_text.append("MOVES")
+            self.optimize_moves()
         if self.optimization & BrainfuckInterpreterOptimization.OPTIMIZATION_NOPS:
             optimization_text.append("NOPS")
             self.optimize_nops()
@@ -50,19 +63,36 @@ class BrainfuckInterpreter():
             print("Optimizations: %s" % ' '.join(optimization_text))
 
     def strip_code(self):
-        self.code = [c for c in self.code if c in self.BRAINFUCK_CHARSET]
+        self.code = [c for c in self.code if c in [*self.BRAINFUCK_CHARSET]]
+
+    def translate_code(self):
+        self.code = [self.BRAINFUCK_CHARSET[c] for c in self.code]
 
     def optimize_arithmetics(self):
         for i in range(len(self.code) - 1):
             ch = self.code[i]
-            if ch == '-' or ch == '+':
+            if ch == self.BRAINFUCK_CHARSET["-"] or ch == self.BRAINFUCK_CHARSET["+"]:
                 counter = 1
                 j = 1
                 while counter < 16 and ch == self.code[i + j]:
                     counter += 1
                     self.code[i + j] = 0
                     j += 1
-                opcode = 0x90 if ch == '-' else 0xa0
+                opcode = 0x90 if ch == self.BRAINFUCK_CHARSET["-"] else 0xa0
+                if (counter > 1):
+                    self.code[i] = opcode + counter - 1
+
+    def optimize_moves(self):
+        for i in range(len(self.code) - 1):
+            ch = self.code[i]
+            if ch == self.BRAINFUCK_CHARSET[">"] or ch == self.BRAINFUCK_CHARSET["<"]:
+                counter = 1
+                j = 1
+                while counter < 16 and ch == self.code[i + j]:
+                    counter += 1
+                    self.code[i + j] = 0
+                    j += 1
+                opcode = 0xb0 if ch == self.BRAINFUCK_CHARSET[">"] else 0xc0
                 if (counter > 1):
                     self.code[i] = opcode + counter - 1
 
@@ -121,13 +151,13 @@ class BrainfuckInterpreter():
         start_code_ptr = self.code_ptr
         while True:
             self.code_ptr += 1
-            if self.code[self.code_ptr] == ']':
+            if self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["]"]:
                 if depth == 0:
                     if self.optimization & BrainfuckInterpreterOptimization.OPTIMIZATION_BRACKETS:
                         self.loops[start_code_ptr] = self.code_ptr
                     return self.code_ptr
                 depth -= 1
-            if self.code[self.code_ptr] == '[':
+            if self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["["]:
                 depth += 1
 
     def matching_open(self):
@@ -137,38 +167,38 @@ class BrainfuckInterpreter():
         start_code_ptr = self.code_ptr
         while True:
             self.code_ptr -= 1
-            if self.code[self.code_ptr] == '[':
+            if self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["["]:
                 if depth == 0:
                     if self.optimization & BrainfuckInterpreterOptimization.OPTIMIZATION_BRACKETS:
                         self.loops[start_code_ptr] = self.code_ptr
                     return self.code_ptr
                 depth -= 1
-            if self.code[self.code_ptr] == ']':
+            if self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["]"]:
                 depth += 1
     
     def exec(self):
         while self.running:
-            if self.code[self.code_ptr] == '>':
+            if self.code[self.code_ptr] == self.BRAINFUCK_CHARSET[">"]:
                 self.mem_ptr += 1
                 self.code_ptr_inc()
-            elif self.code[self.code_ptr] == '<':
+            elif self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["<"]:
                 self.mem_ptr -= 1
                 self.code_ptr_inc()
-            elif self.code[self.code_ptr] == '+':
+            elif self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["+"]:
                 self.memory_inc()
                 self.code_ptr_inc()
-            elif self.code[self.code_ptr] == '-':
+            elif self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["-"]:
                 self.memory_dec()
                 self.code_ptr_inc()
-            elif self.code[self.code_ptr] == '.':
+            elif self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["."]:
                 sys.stdout.write("%c" % chr(self.memory[self.mem_ptr]))
                 self.code_ptr_inc()
-            elif self.code[self.code_ptr] == ',':
+            elif self.code[self.code_ptr] == self.BRAINFUCK_CHARSET[","]:
                 self.memory[self.mem_ptr] = ord(self.input_data.read(1))
                 self.code_ptr_inc()
-            elif self.code[self.code_ptr] == '[':
+            elif self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["["]:
                 self.code_ptr_set(self.matching_close()) if self.memory_is_zero() else self.code_ptr_inc()
-            elif self.code[self.code_ptr] == ']':
+            elif self.code[self.code_ptr] == self.BRAINFUCK_CHARSET["]"]:
                 self.code_ptr_set(self.matching_open()) if not self.memory_is_zero() else self.code_ptr_inc()
             #Extensions/OPTIMIZATIONs
             elif self.code[self.code_ptr] == 0x80:
@@ -179,6 +209,12 @@ class BrainfuckInterpreter():
                 self.code_ptr_inc()
             elif (self.code[self.code_ptr] & 0xf0) == 0xa0:
                 self.memory_inc((self.code[self.code_ptr] & 0x0f) + 1)
+                self.code_ptr_inc()
+            elif (self.code[self.code_ptr] & 0xf0) == 0xb0:
+                self.mem_ptr += (self.code[self.code_ptr] & 0x0f) + 1
+                self.code_ptr_inc()
+            elif (self.code[self.code_ptr] & 0xf0) == 0xc0:
+                self.mem_ptr -= (self.code[self.code_ptr] & 0x0f) + 1
                 self.code_ptr_inc()
             else:
                 self.code_ptr_inc()
@@ -198,6 +234,6 @@ if __name__ == "__main__":
         bf = BrainfuckInterpreter(file=args.file, verbosity=args.verbosity, input_data=args.input, OPTIMIZATION=i)
         print("OPTIMIZATION %d, elapsed: %fs" % (i, timeit.Timer(bf.exec).timeit()))
     """
-    for i in [0, 15]:
+    for i in [0, 2**4 - 1, 2**5 - 1]:
         bf = BrainfuckInterpreter(file=args.file, verbosity=args.verbosity, input_data=args.input, optimization=i)
         print("OPTIMIZATION %d, elapsed: %fs" % (i, timeit.Timer(bf.exec).timeit()))
